@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: local-directory-provisioner
+  name: local-directory-provisioner
+  namespace: ldp
+spec:
+  selector:
+    matchLabels:
+      app: local-directory-provisioner
+  template:
+    metadata:
+      labels:
+        app: local-directory-provisioner
+    spec:
+      nodeSelector:
+        func: build
+      containers:
+      - env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
+        image: hub.predic8.de/p8/local-directory-provisioner:0.0.1
+        command:
+        - /usr/local/bin/local-directory-provisioner
+        - -v=4
+        name: provisioner
+        volumeMounts:
+        - mountPath: /mnt/ssd
+          mountPropagation: HostToContainer
+          name: fast-disks
+      volumes:
+      - hostPath:
+          path: /mnt/ssd
+          type: ""
+        name: fast-disks
+      imagePullSecrets:
+        - name: p8-hub-credentials
+  updateStrategy:
+    type: RollingUpdate
