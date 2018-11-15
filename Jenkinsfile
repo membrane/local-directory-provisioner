@@ -4,7 +4,7 @@ pipeline {
     stages {
         stage('Docker build') {
             steps {
-                sh 'docker build -t p8/local-directory-provisioner .'
+                sh 'docker build -t p8/local-directory-provisioner ./ldp.'
             }
         }
         stage('Docker tag') {
