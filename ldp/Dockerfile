@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:latest AS build
+FROM golang:1.11 AS build
 
 ADD . /go/src/github.com/membrane/local-directory-provisioner/ldp
 WORKDIR /go/src/github.com/membrane/local-directory-provisioner/ldp
@@ -20,7 +20,7 @@ ENV CGO_ENABLED=0 GOOS=linux GOARCH=386
 RUN go build -a -ldflags '-extldflags "-static"' -o /go/bin/local-directory-provisioner local-directory-provisioner.go
 
 
-FROM alpine:latest
+FROM alpine:3.8
 
 COPY --from=build /go/bin/local-directory-provisioner /usr/local/bin/local-directory-provisioner
 CMD ["/usr/local/bin/local-directory-provisioner"]

@@ -2,18 +2,20 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   labels:
-    app: local-volume-provisioner
-  name: local-volume-provisioner
+    app: local-directory-provisioner
+  name: local-directory-provisioner
   namespace: ldp
 spec:
   selector:
     matchLabels:
-      app: local-volume-provisioner
+      app: local-directory-provisioner
   template:
     metadata:
       labels:
-        app: local-volume-provisioner
+        app: local-directory-provisioner
     spec:
+      imagePullSecrets:
+      - name: p8-hub-credentials
       containers:
       - env:
         - name: NODE_NAME
@@ -21,11 +23,11 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: spec.nodeName
-        image: 192.168.137.1/p8/local-directory-provisioner:0.0.1
+        image: hub.predic8.de/p8/local-directory-provisioner:0.0.1
         command:
         - /usr/local/bin/local-directory-provisioner
         - -v=4
-        name: provisioner
+        name: local-directory-provisioner
         volumeMounts:
         - mountPath: /mnt/ssd
           mountPropagation: HostToContainer
