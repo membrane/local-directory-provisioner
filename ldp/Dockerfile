@@ -17,7 +17,7 @@ FROM golang:1.11 AS build
 ADD . /go/src/github.com/membrane/local-directory-provisioner/ldp
 WORKDIR /go/src/github.com/membrane/local-directory-provisioner/ldp
 ENV CGO_ENABLED=0 GOOS=linux GOARCH=386
-RUN go get -u github.com/golang/dep/...
+RUN curl -fsSL -o /usr/local/bin/dep https://github.com/golang/dep/releases/download/v0.5.0/dep-linux-amd64 && chmod +x /usr/local/bin/dep
 RUN dep ensure
 RUN go build -a -ldflags '-extldflags "-static"' -o /go/bin/local-directory-provisioner local-directory-provisioner.go
 
