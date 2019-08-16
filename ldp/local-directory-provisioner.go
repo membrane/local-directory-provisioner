@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/kubernetes-incubator/external-storage/lib/controller"
@@ -462,6 +463,9 @@ func main() {
 		prName,
 		cephFSProvisioner,
 		serverVersion.GitVersion,
+		controller.LeaseDuration(120 * time.Second),
+		controller.RenewDeadline(100 * time.Second),
+		controller.DefaultTermLimit(150 * time.Second),
 	)
 
 	pc.Run(wait.NeverStop)
