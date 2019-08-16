@@ -465,7 +465,7 @@ func main() {
 		serverVersion.GitVersion,
 		controller.LeaseDuration(120 * time.Second),
 		controller.RenewDeadline(100 * time.Second),
-		controller.DefaultTermLimit(150 * time.Second),
+		controller.TermLimit(150 * time.Second),
 	)
 
 	pc.Run(wait.NeverStop)
