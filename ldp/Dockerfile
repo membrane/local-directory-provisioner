@@ -22,7 +22,7 @@ RUN dep ensure
 RUN go build -a -ldflags '-extldflags "-static"' -o /go/bin/local-directory-provisioner local-directory-provisioner.go
 
 
-FROM alpine:3.8
+FROM alpine:3.10
 
 COPY --from=build /go/bin/local-directory-provisioner /usr/local/bin/local-directory-provisioner
 CMD ["/usr/local/bin/local-directory-provisioner"]
