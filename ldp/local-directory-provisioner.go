@@ -231,13 +231,13 @@ func (p *cephFSProvisioner) PlaceOnLocalNode(oldClaim *v1.PersistentVolumeClaim)
 }
 
 // Provision creates a storage asset and returns a PV object representing it.
-func (p *cephFSProvisioner) Provision(options controller.VolumeOptions) (*v1.PersistentVolume, error) {
+func (p *cephFSProvisioner) Provision(options controller.ProvisionOptions) (*v1.PersistentVolume, error) {
 	glog.Infof("considering PVC %s", options.PVC.Name)
 
 	if options.PVC.Spec.Selector != nil {
 		return nil, fmt.Errorf("claim Selector is not supported")
 	}
-	baseDir, err := p.parseParameters(options.Parameters)
+	baseDir, err := p.parseParameters(options.StorageClass.Parameters)
 	if err != nil {
 		return nil, err
 	}
@@ -272,7 +272,7 @@ func (p *cephFSProvisioner) Provision(options controller.VolumeOptions) (*v1.Per
 			},
 		},
 		Spec: v1.PersistentVolumeSpec{
-			PersistentVolumeReclaimPolicy: options.PersistentVolumeReclaimPolicy,
+			PersistentVolumeReclaimPolicy: *options.StorageClass.ReclaimPolicy,
 			AccessModes:                   options.PVC.Spec.AccessModes,
 			Capacity: v1.ResourceList{ //FIXME: kernel cephfs doesn't enforce quota, capacity is not meaningless here.
 				v1.ResourceName(v1.ResourceStorage): options.PVC.Spec.Resources.Requests[v1.ResourceName(v1.ResourceStorage)],
