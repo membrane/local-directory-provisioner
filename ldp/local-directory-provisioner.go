@@ -160,6 +160,9 @@ func (p *cephFSProvisioner) CanBePlacedOnLocalNode(claim *v1.PersistentVolumeCla
 		}
 		if requestedNodeName, found2 := pvc.Annotations[provisionerNodeKey]; found2 {
 			if requestedNodeName == p.nodeName {
+				glog.Infof("requestedNodeName == p.nodeName: %s", requestedNodeName == p.nodeName)
+				glog.Infof("requestedNodeName", requestedNodeName)
+				glog.Infof("p.nodeName: %s", p.nodeName)
 				return false
 			}
 		}
