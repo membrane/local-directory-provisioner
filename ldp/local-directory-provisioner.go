@@ -24,23 +24,23 @@ import (
 	"strings"
 	"time"
 
+	"bytes"
+	"encoding/json"
 	"github.com/golang/glog"
-	"sigs.k8s.io/sig-storage-lib-external-provisioner/controller"
+	"io/ioutil"
 	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	"io/ioutil"
 	"net"
+	"sigs.k8s.io/sig-storage-lib-external-provisioner/controller"
 	"strconv"
-	"bytes"
-	"k8s.io/apimachinery/pkg/types"
-	"encoding/json"
-	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/util/strategicpatch"
 )
 
 const (
@@ -61,12 +61,11 @@ type cephFSProvisioner struct {
 
 var _ controller.Qualifier = &cephFSProvisioner{}
 
-
 func newLocalDirectoryProvisioner(client kubernetes.Interface, id string, nodeName string) controller.Provisioner {
 	return &cephFSProvisioner{
-		client:          client,
-		identity:        id,
-		nodeName:        nodeName,
+		client:   client,
+		identity: id,
+		nodeName: nodeName,
 	}
 }
 
@@ -117,7 +116,7 @@ func GetMyIP() (string, error) {
 	return "", errors.New("no IP found")
 }
 
-func (p *cephFSProvisioner) IsPlacedOnLocalNode(claim *v1.PersistentVolumeClaim) (bool) {
+func (p *cephFSProvisioner) IsPlacedOnLocalNode(claim *v1.PersistentVolumeClaim) bool {
 	if requestedNodeName, found := claim.Annotations[provisionerNodeKey]; found {
 		if requestedNodeName == p.nodeName {
 			return true
@@ -127,14 +126,13 @@ func (p *cephFSProvisioner) IsPlacedOnLocalNode(claim *v1.PersistentVolumeClaim)
 	return false
 }
 
-func (p *cephFSProvisioner) CanBePlacedOnLocalNode(claim *v1.PersistentVolumeClaim) (bool) {
+func (p *cephFSProvisioner) CanBePlacedOnLocalNode(claim *v1.PersistentVolumeClaim) bool {
 	if requestedNodeName, found := claim.Annotations[provisionerNodeKey]; found {
 		if requestedNodeName == p.nodeName {
 			return true
 		}
 		return false
 	}
-
 
 	// check whether there is a claim with the same labels already placed on this node
 	var ls bytes.Buffer
@@ -175,7 +173,7 @@ func (p *cephFSProvisioner) CanBePlacedOnLocalNode(claim *v1.PersistentVolumeCla
 	return true
 }
 
-func (p *cephFSProvisioner) PlaceOnLocalNode(oldClaim *v1.PersistentVolumeClaim) (error) {
+func (p *cephFSProvisioner) PlaceOnLocalNode(oldClaim *v1.PersistentVolumeClaim) error {
 	claim := oldClaim.DeepCopy()
 
 	glog.Infof("Placing PVC %s on node %s.", claim.Name, p.nodeName)
@@ -242,8 +240,8 @@ func (p *cephFSProvisioner) Provision(options controller.ProvisionOptions) (*v1.
 		return nil, err
 	}
 
-	if ! p.IsPlacedOnLocalNode(options.PVC) {
-		if ! p.CanBePlacedOnLocalNode(options.PVC) {
+	if !p.IsPlacedOnLocalNode(options.PVC) {
+		if !p.CanBePlacedOnLocalNode(options.PVC) {
 			return nil, errors.New(fmt.Sprintf("PVC %s cannot be placed on %s.", options.PVC.Name, p.nodeName))
 		}
 		perr := p.PlaceOnLocalNode(options.PVC)
@@ -284,13 +282,13 @@ func (p *cephFSProvisioner) Provision(options controller.ProvisionOptions) (*v1.
 			},
 			NodeAffinity: &v1.VolumeNodeAffinity{
 				Required: &v1.NodeSelector{
-					NodeSelectorTerms: [] v1.NodeSelectorTerm {
+					NodeSelectorTerms: []v1.NodeSelectorTerm{
 						{
-							MatchExpressions: [] v1.NodeSelectorRequirement{
+							MatchExpressions: []v1.NodeSelectorRequirement{
 								{
-									Key: "kubernetes.io/hostname",
+									Key:      "kubernetes.io/hostname",
 									Operator: "In",
-									Values: []string { p.nodeName },
+									Values:   []string{p.nodeName},
 								},
 							},
 						},
@@ -347,7 +345,6 @@ func (p *cephFSProvisioner) Delete(volume *v1.PersistentVolume) error {
 		return removeErr
 	}
 
-
 	return nil
 }
 
@@ -381,7 +378,7 @@ func GetNodeName(client kubernetes.Interface) (string, error) {
 		return "", err
 	}
 
-	namespace, nsErr :=  GetNamespace()
+	namespace, nsErr := GetNamespace()
 	if nsErr != nil {
 		return "", nsErr
 	}
@@ -401,9 +398,9 @@ func GetNodeName(client kubernetes.Interface) (string, error) {
 }
 
 var (
-	master          = flag.String("master", "", "Master URL")
-	kubeconfig      = flag.String("kubeconfig", "", "Absolute path to the kubeconfig")
-	id              = flag.String("id", "", "Unique provisioner identity")
+	master     = flag.String("master", "", "Master URL")
+	kubeconfig = flag.String("kubeconfig", "", "Absolute path to the kubeconfig")
+	id         = flag.String("id", "", "Unique provisioner identity")
 )
 
 func main() {
@@ -463,8 +460,8 @@ func main() {
 		prName,
 		cephFSProvisioner,
 		serverVersion.GitVersion,
-		controller.LeaseDuration(120 * time.Second),
-		controller.RenewDeadline(100 * time.Second),
+		controller.LeaseDuration(120*time.Second),
+		controller.RenewDeadline(100*time.Second),
 	)
 
 	pc.Run(wait.NeverStop)
