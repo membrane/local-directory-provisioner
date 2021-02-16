@@ -59,12 +59,11 @@ type cephFSProvisioner struct {
 
 var _ controller.Qualifier = &cephFSProvisioner{}
 
-
 func newLocalDirectoryProvisioner(client kubernetes.Interface, id string, nodeName string) controller.Provisioner {
 	return &cephFSProvisioner{
-		client:          client,
-		identity:        id,
-		nodeName:        nodeName,
+		client:   client,
+		identity: id,
+		nodeName: nodeName,
 	}
 }
 
@@ -115,7 +114,7 @@ func GetMyIP() (string, error) {
 	return "", errors.New("no IP found")
 }
 
-func (p *cephFSProvisioner) IsPlacedOnLocalNode(claim *v1.PersistentVolumeClaim) (bool) {
+func (p *cephFSProvisioner) IsPlacedOnLocalNode(claim *v1.PersistentVolumeClaim) bool {
 	if requestedNodeName, found := claim.Annotations[provisionerNodeKey]; found {
 		if requestedNodeName == p.nodeName {
 			return true
@@ -132,7 +131,6 @@ func (p *cephFSProvisioner) CanBePlacedOnLocalNode(ctx context.Context, claim *v
 		}
 		return false
 	}
-
 
 	// check whether there is a claim with the same labels already placed on this node
 	var ls bytes.Buffer
@@ -160,6 +158,9 @@ func (p *cephFSProvisioner) CanBePlacedOnLocalNode(ctx context.Context, claim *v
 		}
 		if requestedNodeName, found2 := pvc.Annotations[provisionerNodeKey]; found2 {
 			if requestedNodeName == p.nodeName {
+				glog.Infof("requestedNodeName == p.nodeName: %s", requestedNodeName == p.nodeName)
+				glog.Infof("requestedNodeName", requestedNodeName)
+				glog.Infof("p.nodeName: %s", p.nodeName)
 				return false
 			}
 		}
@@ -284,13 +285,13 @@ func (p *cephFSProvisioner) Provision(ctx context.Context, options controller.Pr
 			},
 			NodeAffinity: &v1.VolumeNodeAffinity{
 				Required: &v1.NodeSelector{
-					NodeSelectorTerms: [] v1.NodeSelectorTerm {
+					NodeSelectorTerms: []v1.NodeSelectorTerm{
 						{
-							MatchExpressions: [] v1.NodeSelectorRequirement{
+							MatchExpressions: []v1.NodeSelectorRequirement{
 								{
-									Key: "kubernetes.io/hostname",
+									Key:      "kubernetes.io/hostname",
 									Operator: "In",
-									Values: []string { p.nodeName },
+									Values:   []string{p.nodeName},
 								},
 							},
 						},
@@ -347,7 +348,6 @@ func (p *cephFSProvisioner) Delete(ctx context.Context, volume *v1.PersistentVol
 		return removeErr
 	}
 
-
 	return nil
 }
 
@@ -381,7 +381,7 @@ func GetNodeName(ctx context.Context, client kubernetes.Interface) (string, erro
 		return "", err
 	}
 
-	namespace, nsErr :=  GetNamespace()
+	namespace, nsErr := GetNamespace()
 	if nsErr != nil {
 		return "", nsErr
 	}
@@ -401,9 +401,9 @@ func GetNodeName(ctx context.Context, client kubernetes.Interface) (string, erro
 }
 
 var (
-	master          = flag.String("master", "", "Master URL")
-	kubeconfig      = flag.String("kubeconfig", "", "Absolute path to the kubeconfig")
-	id              = flag.String("id", "", "Unique provisioner identity")
+	master     = flag.String("master", "", "Master URL")
+	kubeconfig = flag.String("kubeconfig", "", "Absolute path to the kubeconfig")
+	id         = flag.String("id", "", "Unique provisioner identity")
 )
 
 func main() {
