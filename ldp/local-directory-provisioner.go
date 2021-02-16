@@ -17,30 +17,28 @@ limitations under the License.
 package main
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
-	"os"
-	"strings"
-	"time"
-
 	"github.com/golang/glog"
-	"github.com/kubernetes-incubator/external-storage/lib/controller"
+	"io/ioutil"
 	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	"io/ioutil"
 	"net"
+	"os"
+	"sigs.k8s.io/sig-storage-lib-external-provisioner/v6/controller"
 	"strconv"
-	"bytes"
-	"k8s.io/apimachinery/pkg/types"
-	"encoding/json"
-	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/util/strategicpatch"
+	"strings"
 )
 
 const (
@@ -72,7 +70,7 @@ func newLocalDirectoryProvisioner(client kubernetes.Interface, id string, nodeNa
 
 var _ controller.Provisioner = &cephFSProvisioner{}
 
-func (p cephFSProvisioner) ShouldProvision(claim *v1.PersistentVolumeClaim) bool {
+func (p cephFSProvisioner) ShouldProvision(ctx context.Context, claim *v1.PersistentVolumeClaim) bool {
 	//// As long as the export limit has not been reached we're ok to provision
 	//ok := p.checkExportLimit()
 	//if !ok {
@@ -85,7 +83,7 @@ func (p cephFSProvisioner) ShouldProvision(claim *v1.PersistentVolumeClaim) bool
 	if isPlacedOnLocalNode {
 		return true
 	}
-	canBePlacedOnLocalNode := p.CanBePlacedOnLocalNode(claim)
+	canBePlacedOnLocalNode := p.CanBePlacedOnLocalNode(ctx, claim)
 	glog.Infof("canBePlacedOnLocalNode = %s", strconv.FormatBool(canBePlacedOnLocalNode))
 	return canBePlacedOnLocalNode
 }
@@ -127,7 +125,7 @@ func (p *cephFSProvisioner) IsPlacedOnLocalNode(claim *v1.PersistentVolumeClaim)
 	return false
 }
 
-func (p *cephFSProvisioner) CanBePlacedOnLocalNode(claim *v1.PersistentVolumeClaim) (bool) {
+func (p *cephFSProvisioner) CanBePlacedOnLocalNode(ctx context.Context, claim *v1.PersistentVolumeClaim) (bool) {
 	if requestedNodeName, found := claim.Annotations[provisionerNodeKey]; found {
 		if requestedNodeName == p.nodeName {
 			return true
@@ -149,7 +147,7 @@ func (p *cephFSProvisioner) CanBePlacedOnLocalNode(claim *v1.PersistentVolumeCla
 		return false
 	}
 	glog.Infof("Label Selector: %s", ls.String())
-	pvcs, err := p.client.CoreV1().PersistentVolumeClaims(claim.Namespace).List(metav1.ListOptions{
+	pvcs, err := p.client.CoreV1().PersistentVolumeClaims(claim.Namespace).List(ctx, metav1.ListOptions{
 		LabelSelector: ls.String(),
 	})
 	if err != nil {
@@ -175,7 +173,7 @@ func (p *cephFSProvisioner) CanBePlacedOnLocalNode(claim *v1.PersistentVolumeCla
 	return true
 }
 
-func (p *cephFSProvisioner) PlaceOnLocalNode(oldClaim *v1.PersistentVolumeClaim) (error) {
+func (p *cephFSProvisioner) PlaceOnLocalNode(ctx context.Context, oldClaim *v1.PersistentVolumeClaim) (error) {
 	claim := oldClaim.DeepCopy()
 
 	glog.Infof("Placing PVC %s on node %s.", claim.Name, p.nodeName)
@@ -223,32 +221,34 @@ func (p *cephFSProvisioner) PlaceOnLocalNode(oldClaim *v1.PersistentVolumeClaim)
 	glog.Infof("patch bytes: %s", string(patchBytes))
 
 	_, err := p.client.CoreV1().PersistentVolumeClaims(claim.Namespace).Patch(
+		ctx,
 		claim.Name,
 		types.StrategicMergePatchType,
-		patchBytes)
+		patchBytes,
+		metav1.PatchOptions{})
 
 	return err
 }
 
 // Provision creates a storage asset and returns a PV object representing it.
-func (p *cephFSProvisioner) Provision(options controller.VolumeOptions) (*v1.PersistentVolume, error) {
+func (p *cephFSProvisioner) Provision(ctx context.Context, options controller.ProvisionOptions) (*v1.PersistentVolume, controller.ProvisioningState, error) {
 	glog.Infof("considering PVC %s", options.PVC.Name)
 
 	if options.PVC.Spec.Selector != nil {
-		return nil, fmt.Errorf("claim Selector is not supported")
+		return nil, controller.ProvisioningFinished, fmt.Errorf("claim Selector is not supported")
 	}
-	baseDir, err := p.parseParameters(options.Parameters)
+	baseDir, err := p.parseParameters(options.StorageClass.Parameters)
 	if err != nil {
-		return nil, err
+		return nil, controller.ProvisioningFinished, err
 	}
 
 	if ! p.IsPlacedOnLocalNode(options.PVC) {
-		if ! p.CanBePlacedOnLocalNode(options.PVC) {
-			return nil, errors.New(fmt.Sprintf("PVC %s cannot be placed on %s.", options.PVC.Name, p.nodeName))
+		if ! p.CanBePlacedOnLocalNode(ctx, options.PVC) {
+			return nil, controller.ProvisioningFinished, errors.New(fmt.Sprintf("PVC %s cannot be placed on %s.", options.PVC.Name, p.nodeName))
 		}
-		perr := p.PlaceOnLocalNode(options.PVC)
+		perr := p.PlaceOnLocalNode(ctx, options.PVC)
 		if perr != nil {
-			return nil, perr
+			return nil, controller.ProvisioningFinished, perr
 		}
 	}
 
@@ -259,7 +259,7 @@ func (p *cephFSProvisioner) Provision(options controller.VolumeOptions) (*v1.Per
 	path := fmt.Sprintf("%s/%s", baseDir, volumeName)
 	mkdirErr := os.Mkdir(path, os.ModePerm)
 	if mkdirErr != nil {
-		return nil, mkdirErr
+		return nil, controller.ProvisioningFinished, mkdirErr
 	}
 
 	// validate output
@@ -272,7 +272,7 @@ func (p *cephFSProvisioner) Provision(options controller.VolumeOptions) (*v1.Per
 			},
 		},
 		Spec: v1.PersistentVolumeSpec{
-			PersistentVolumeReclaimPolicy: options.PersistentVolumeReclaimPolicy,
+			PersistentVolumeReclaimPolicy: *options.StorageClass.ReclaimPolicy,
 			AccessModes:                   options.PVC.Spec.AccessModes,
 			Capacity: v1.ResourceList{ //FIXME: kernel cephfs doesn't enforce quota, capacity is not meaningless here.
 				v1.ResourceName(v1.ResourceStorage): options.PVC.Spec.Resources.Requests[v1.ResourceName(v1.ResourceStorage)],
@@ -302,7 +302,7 @@ func (p *cephFSProvisioner) Provision(options controller.VolumeOptions) (*v1.Per
 
 	glog.Infof("successfully created local dir share %+v", pv.Spec.PersistentVolumeSource.Local)
 
-	return pv, nil
+	return pv, controller.ProvisioningFinished, nil
 }
 
 func GetNamespace() (string, error) {
@@ -320,7 +320,7 @@ func GetNamespace() (string, error) {
 
 // Delete removes the storage asset that was created by Provision represented
 // by the given PV.
-func (p *cephFSProvisioner) Delete(volume *v1.PersistentVolume) error {
+func (p *cephFSProvisioner) Delete(ctx context.Context, volume *v1.PersistentVolume) error {
 	ann, ok := volume.Annotations[provisionerIDAnn]
 	if !ok {
 		return errors.New("identity annotation not found on PV")
@@ -370,7 +370,7 @@ func (p *cephFSProvisioner) parseParameters(parameters map[string]string) (strin
 	}
 	return baseDir, nil
 }
-func GetNodeName(client kubernetes.Interface) (string, error) {
+func GetNodeName(ctx context.Context, client kubernetes.Interface) (string, error) {
 	nodeName := os.Getenv("NODE_NAME")
 	if len(nodeName) > 0 {
 		return nodeName, nil
@@ -387,7 +387,7 @@ func GetNodeName(client kubernetes.Interface) (string, error) {
 	}
 
 	// check, whether this volume actually belongs onto this node
-	podList, err := client.CoreV1().Pods(namespace).List(metav1.ListOptions{
+	podList, err := client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
 		FieldSelector: fmt.Sprintf("status.podIP=%s", myIP),
 	})
 	if err != nil {
@@ -446,7 +446,7 @@ func main() {
 		glog.Fatalf("Error getting server version: %v", err)
 	}
 
-	nodeName, nErr := GetNodeName(clientset)
+	nodeName, nErr := GetNodeName(context.Background(), clientset)
 	if nErr != nil {
 		glog.Fatalf("Error getting node name: %v", nErr)
 	}
@@ -463,10 +463,8 @@ func main() {
 		prName,
 		cephFSProvisioner,
 		serverVersion.GitVersion,
-		controller.LeaseDuration(120 * time.Second),
-		controller.RenewDeadline(100 * time.Second),
-		controller.TermLimit(150 * time.Second),
+		controller.LeaderElection(false),
 	)
 
-	pc.Run(wait.NeverStop)
+	pc.Run(context.Background())
 }
