@@ -12,17 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.13 AS build
+FROM golang:1.15 AS build
 
 ADD . /go/src/github.com/membrane/local-directory-provisioner/ldp
 WORKDIR /go/src/github.com/membrane/local-directory-provisioner/ldp
 ENV CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-RUN curl -fsSL -o /usr/local/bin/dep https://github.com/golang/dep/releases/download/v0.5.4/dep-linux-amd64 && chmod +x /usr/local/bin/dep
-RUN dep ensure
+RUN go mod download
 RUN go build -a -ldflags '-extldflags "-static"' -o /go/bin/local-directory-provisioner local-directory-provisioner.go
 
 
-FROM alpine:3.10
+FROM alpine:3.13
 
 COPY --from=build /go/bin/local-directory-provisioner /usr/local/bin/local-directory-provisioner
 CMD ["/usr/local/bin/local-directory-provisioner"]
