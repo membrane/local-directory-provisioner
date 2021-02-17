@@ -4,6 +4,6 @@ metadata:
   name: local-ssd
 provisioner: predic8.de/local-directory
 reclaimPolicy: Delete
-volumeBindingMode: WaitForFirstConsumer
+volumeBindingMode: Immediate
 parameters:
   baseDir: /mnt/ssd
