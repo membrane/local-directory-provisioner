@@ -19,6 +19,7 @@ pipeline {
                 sh 'docker push hub.predic8.de/p8/local-directory-provisioner:latest'
             }
         }
+/*
         stage('Apply Service Account') {
             steps {
                 sh 'kubectl $KUBECTL_OPTS apply -f ./ldp/deploy/rbac/serviceaccount.yaml'
@@ -44,5 +45,6 @@ pipeline {
                 sh 'kubectl $KUBECTL_OPTS apply -f ./ldp/deploy/rbac/daemonset.yaml'
             }
         }
+*/
     }
 }
