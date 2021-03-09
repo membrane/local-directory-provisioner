@@ -464,6 +464,7 @@ func main() {
 		cephFSProvisioner,
 		serverVersion.GitVersion,
 		controller.LeaderElection(false),
+		controller.Threadiness(1),
 	)
 
 	pc.Run(context.Background())
