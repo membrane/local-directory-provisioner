@@ -117,6 +117,7 @@ func GetMyIP() (string, error) {
 
 func (p *cephFSProvisioner) IsPlacedOnLocalNode(claim *v1.PersistentVolumeClaim) bool {
 	if requestedNodeName, found := claim.Annotations[provisionerNodeKey]; found {
+		glog.Infof("IsPlacedOnLocalNode: Found hostname: %s", requestedNodeName)
 		if requestedNodeName == p.nodeName {
 			return true
 		}
@@ -127,7 +128,7 @@ func (p *cephFSProvisioner) IsPlacedOnLocalNode(claim *v1.PersistentVolumeClaim)
 
 func (p *cephFSProvisioner) CanBePlacedOnLocalNode(ctx context.Context, claim *v1.PersistentVolumeClaim) (bool) {
 	if requestedNodeName, found := claim.Annotations[provisionerNodeKey]; found {
-		glog.Infof("Found hostname annotation")
+		glog.Infof("Found hostname annotation 1: %s", requestedNodeName)
 		if requestedNodeName == p.nodeName {
 			return true
 		}
@@ -160,7 +161,7 @@ func (p *cephFSProvisioner) CanBePlacedOnLocalNode(ctx context.Context, claim *v
 			continue
 		}
 		if requestedNodeName, found2 := pvc.Annotations[provisionerNodeKey]; found2 {
-			glog.Infof("Found hostname annotation %s", requestedNodeName)
+			glog.Infof("Found hostname annotation 2: %s", requestedNodeName)
 			if requestedNodeName == p.nodeName {
 				glog.Infof("requestedNodeName == p.nodeName: %s", requestedNodeName == p.nodeName)
 				glog.Infof("requestedNodeName", requestedNodeName)
