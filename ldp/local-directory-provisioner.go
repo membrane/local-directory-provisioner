@@ -36,6 +36,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"net"
 	"os"
+	"reflect"
 	"sigs.k8s.io/sig-storage-lib-external-provisioner/v6/controller"
 	"strconv"
 	"strings"
@@ -126,6 +127,7 @@ func (p *cephFSProvisioner) IsPlacedOnLocalNode(claim *v1.PersistentVolumeClaim)
 
 func (p *cephFSProvisioner) CanBePlacedOnLocalNode(ctx context.Context, claim *v1.PersistentVolumeClaim) (bool) {
 	if requestedNodeName, found := claim.Annotations[provisionerNodeKey]; found {
+		glog.Infof("Found hostname annotation")
 		if requestedNodeName == p.nodeName {
 			return true
 		}
@@ -153,25 +155,28 @@ func (p *cephFSProvisioner) CanBePlacedOnLocalNode(ctx context.Context, claim *v
 		return false
 	}
 	for _, pvc := range pvcs.Items {
+		glog.Infof("Found PVC %s", pvc.Name)
 		if pvc.Name == claim.Name {
 			continue
 		}
 		if requestedNodeName, found2 := pvc.Annotations[provisionerNodeKey]; found2 {
+			glog.Infof("Found hostname annotation %s", requestedNodeName)
 			if requestedNodeName == p.nodeName {
 				glog.Infof("requestedNodeName == p.nodeName: %s", requestedNodeName == p.nodeName)
 				glog.Infof("requestedNodeName", requestedNodeName)
 				glog.Infof("p.nodeName: %s", p.nodeName)
-				return false
-			}
-		}
-		for k := range pvc.Labels {
-			if _, found3 := claim.Annotations[k]; !found3 {
-				continue
+				if p.HasSameLabels(&pvc, claim) {
+					return false
+				}
 			}
 		}
 	}
 
 	return true
+}
+
+func (p *cephFSProvisioner) HasSameLabels(a *v1.PersistentVolumeClaim, b *v1.PersistentVolumeClaim) (bool) {
+	return reflect.DeepEqual(a.Labels, b.Labels)
 }
 
 func (p *cephFSProvisioner) PlaceOnLocalNode(ctx context.Context, oldClaim *v1.PersistentVolumeClaim) (error) {
@@ -394,7 +399,7 @@ func GetNodeName(ctx context.Context, client kubernetes.Interface) (string, erro
 		return "", err
 	}
 	if len(podList.Items) == 0 {
-		return "", errors.New("Could not detect NODE_NAME. Either set env var, or fix self-lookup (Pod by IP address).")
+		return "", errors.New("could not detect NODE_NAME. Either set env var, or fix self-lookup (Pod by IP address)")
 	}
 
 	return podList.Items[0].Spec.NodeName, nil
