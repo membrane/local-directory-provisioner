@@ -199,8 +199,8 @@ func (p *cephFSProvisioner) PlaceOnLocalNode(ctx context.Context, oldClaim *v1.P
 	if objLabels == nil {
 		objLabels = make(map[string]string)
 	}
-	glog.Infof("current annotations are %v", objLabels)
 
+	glog.Infof("current annotations are %v", objLabels)
 	//update the pod labels
 	newLabels := make(map[string]string)
 	//newLabels["policytest2"] = "jeffsays"
@@ -209,9 +209,9 @@ func (p *cephFSProvisioner) PlaceOnLocalNode(ctx context.Context, oldClaim *v1.P
 	for key, value := range newLabels {
 		objLabels[key] = value
 	}
-	glog.Infof("updated annotations are %v", objLabels)
-
 	accessor.SetAnnotations(objLabels)
+
+	glog.Infof("updated annotations are %v", objLabels)
 
 	newData, err4 := json.Marshal(claim)
 	if err4 != nil {
