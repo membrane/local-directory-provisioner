@@ -163,8 +163,8 @@ func (p *cephFSProvisioner) CanBePlacedOnLocalNode(ctx context.Context, claim *v
 		if requestedNodeName, found2 := pvc.Annotations[provisionerNodeKey]; found2 {
 			glog.Infof("Found hostname annotation 2: %s", requestedNodeName)
 			if requestedNodeName == p.nodeName {
-				glog.Infof("requestedNodeName == p.nodeName: %s", requestedNodeName == p.nodeName)
-				glog.Infof("requestedNodeName", requestedNodeName)
+				glog.Infof("requestedNodeName == p.nodeName: %s", strconv.FormatBool(requestedNodeName == p.nodeName))
+				glog.Infof("requestedNodeName = %s", requestedNodeName)
 				glog.Infof("p.nodeName: %s", p.nodeName)
 				if p.HasSameLabels(&pvc, claim) {
 					return false
@@ -225,14 +225,16 @@ func (p *cephFSProvisioner) PlaceOnLocalNode(ctx context.Context, oldClaim *v1.P
 	if len(patchBytes) > 0 {
 	}
 
-	glog.Infof("patch bytes: %s", string(patchBytes))
-
 	_, err := p.client.CoreV1().PersistentVolumeClaims(claim.Namespace).Patch(
 		ctx,
 		claim.Name,
 		types.StrategicMergePatchType,
 		patchBytes,
 		metav1.PatchOptions{})
+
+	glog.Infof("patch bytes: %s", string(patchBytes))
+
+	glog.Infof("I %s claimed claim %s", p.nodeName, claim.Name)
 
 	return err
 }
