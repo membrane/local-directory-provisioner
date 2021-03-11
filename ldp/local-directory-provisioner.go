@@ -157,13 +157,8 @@ func (p *cephFSProvisioner) CanBePlacedOnLocalNode(ctx context.Context, claim *v
 	}
 	for _, pvc := range pvcs.Items {
 		glog.Infof("Found PVC %s (claim: %s)", pvc.Name, claim.Name)
+		glog.Infof("pvc: %s; claim: %s", pvc.Annotations[provisionerNodeKey], claim.Annotations[provisionerNodeKey])
 		if pvc.Name == claim.Name {
-			glog.Infof("pvc.Name == claim.Name: true")
-			eq := p.HasSameLabels(&pvc, claim)
-			glog.Infof("%s and %s are the same: %s", pvc.Labels, claim.Labels, strconv.FormatBool(eq))
-			if eq {
-				return true
-			}
 			continue
 		}
 
@@ -184,9 +179,7 @@ func (p *cephFSProvisioner) CanBePlacedOnLocalNode(ctx context.Context, claim *v
 }
 
 func (p *cephFSProvisioner) HasSameLabels(a *v1.PersistentVolumeClaim, b *v1.PersistentVolumeClaim) (bool) {
-	eq := reflect.DeepEqual(a.Labels, b.Labels)
-	glog.Infof("labels %s and %s are the same: %s", a.Labels, b.Labels, strconv.FormatBool(eq))
-	return eq
+	return reflect.DeepEqual(a.Labels, b.Labels)
 }
 
 func (p *cephFSProvisioner) PlaceOnLocalNode(ctx context.Context, oldClaim *v1.PersistentVolumeClaim) (error) {
