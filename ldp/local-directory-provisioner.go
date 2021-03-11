@@ -156,7 +156,7 @@ func (p *cephFSProvisioner) CanBePlacedOnLocalNode(ctx context.Context, claim *v
 		return false
 	}
 	for _, pvc := range pvcs.Items {
-		glog.Infof("Found PVC %s", pvc.Name)
+		glog.Infof("Found PVC %s (claim: %s)", pvc.Name, claim.Name)
 		if pvc.Name == claim.Name {
 			continue
 		}
