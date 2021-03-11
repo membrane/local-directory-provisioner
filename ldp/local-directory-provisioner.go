@@ -177,7 +177,9 @@ func (p *cephFSProvisioner) CanBePlacedOnLocalNode(ctx context.Context, claim *v
 }
 
 func (p *cephFSProvisioner) HasSameLabels(a *v1.PersistentVolumeClaim, b *v1.PersistentVolumeClaim) (bool) {
-	return reflect.DeepEqual(a.Labels, b.Labels)
+	eq := reflect.DeepEqual(a.Labels, b.Labels)
+	glog.Infof("labels %s and %s are the same: %s", a.Labels, b.Labels, strconv.FormatBool(eq))
+	return eq
 }
 
 func (p *cephFSProvisioner) PlaceOnLocalNode(ctx context.Context, oldClaim *v1.PersistentVolumeClaim) (error) {
@@ -203,7 +205,6 @@ func (p *cephFSProvisioner) PlaceOnLocalNode(ctx context.Context, oldClaim *v1.P
 	glog.Infof("current annotations are %v", objLabels)
 	//update the pod labels
 	newLabels := make(map[string]string)
-	//newLabels["policytest2"] = "jeffsays"
 	newLabels[provisionerNodeKey] = p.nodeName
 
 	for key, value := range newLabels {
