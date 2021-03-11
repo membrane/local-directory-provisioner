@@ -14,10 +14,12 @@
 
 FROM golang:1.15 AS build
 
-ADD . /go/src/github.com/membrane/local-directory-provisioner/ldp
+ADD go.mod /go/src/github.com/membrane/local-directory-provisioner/ldp/
+ADD go.sum /go/src/github.com/membrane/local-directory-provisioner/ldp/
 WORKDIR /go/src/github.com/membrane/local-directory-provisioner/ldp
 ENV CGO_ENABLED=0 GOOS=linux GOARCH=amd64
 RUN go mod download
+ADD . /go/src/github.com/membrane/local-directory-provisioner/ldp
 RUN go build -a -ldflags '-extldflags "-static"' -o /go/bin/local-directory-provisioner local-directory-provisioner.go
 
 
