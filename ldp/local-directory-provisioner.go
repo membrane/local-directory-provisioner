@@ -28,7 +28,6 @@ import (
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/kubernetes"
@@ -226,16 +225,19 @@ func (p *cephFSProvisioner) PlaceOnLocalNode(ctx context.Context, oldClaim *v1.P
 	if len(patchBytes) > 0 {
 	}
 
-	_, err := p.client.CoreV1().PersistentVolumeClaims(claim.Namespace).Patch(
+	_, err := p.client.CoreV1().PersistentVolumeClaims(claim.Namespace).Update(
 		ctx,
-		claim.Name,
-		types.StrategicMergePatchType,
-		patchBytes,
-		metav1.PatchOptions{})
+		claim,
+		//claim.Name,
+		//types.StrategicMergePatchType,
+		//patchBytes,
+		//metav1.PatchOptions{})
+		metav1.UpdateOptions{})
 
 	glog.Infof("patch bytes: %s", string(patchBytes))
-
-	glog.Infof("I %s claimed claim %s", p.nodeName, claim.Name)
+	if err != nil {
+		glog.Infof("I %s claimed claim %s", p.nodeName, claim.Name)
+	}
 
 	return err
 }
