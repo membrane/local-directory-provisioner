@@ -159,7 +159,7 @@ func (p *cephFSProvisioner) CanBePlacedOnLocalNode(ctx context.Context, claim *v
 		glog.Infof("Found PVC %s (claim: %s)", pvc.Name, claim.Name)
 		if pvc.Name == claim.Name {
 			if p.HasSameLabels(&pvc, claim) {
-				return false
+				return true
 			}
 			continue
 		}
