@@ -125,7 +125,7 @@ func (p *cephFSProvisioner) IsPlacedOnLocalNode(claim *v1.PersistentVolumeClaim)
 	return false
 }
 
-func (p *cephFSProvisioner) CanBePlacedOnLocalNode(ctx context.Context, claim *v1.PersistentVolumeClaim) (bool) {
+func (p *cephFSProvisioner) CanBePlacedOnLocalNode(ctx context.Context, claim *v1.PersistentVolumeClaim) bool {
 	if requestedNodeName, found := claim.Annotations[provisionerNodeKey]; found {
 		glog.Infof("Found hostname annotation 1: %s", requestedNodeName)
 		if requestedNodeName == p.nodeName {
@@ -177,11 +177,11 @@ func (p *cephFSProvisioner) CanBePlacedOnLocalNode(ctx context.Context, claim *v
 	return true
 }
 
-func (p *cephFSProvisioner) HasSameLabels(a *v1.PersistentVolumeClaim, b *v1.PersistentVolumeClaim) (bool) {
+func (p *cephFSProvisioner) HasSameLabels(a *v1.PersistentVolumeClaim, b *v1.PersistentVolumeClaim) bool {
 	return reflect.DeepEqual(a.Labels, b.Labels)
 }
 
-func (p *cephFSProvisioner) PlaceOnLocalNode(ctx context.Context, oldClaim *v1.PersistentVolumeClaim) (error) {
+func (p *cephFSProvisioner) PlaceOnLocalNode(ctx context.Context, oldClaim *v1.PersistentVolumeClaim) error {
 	claim := oldClaim.DeepCopy()
 
 	glog.Infof("Placing PVC %s on node %s.", claim.Name, p.nodeName)
@@ -228,10 +228,6 @@ func (p *cephFSProvisioner) PlaceOnLocalNode(ctx context.Context, oldClaim *v1.P
 	_, err := p.client.CoreV1().PersistentVolumeClaims(claim.Namespace).Update(
 		ctx,
 		claim,
-		//claim.Name,
-		//types.StrategicMergePatchType,
-		//patchBytes,
-		//metav1.PatchOptions{})
 		metav1.UpdateOptions{})
 
 	glog.Infof("patch bytes: %s", string(patchBytes))
@@ -254,8 +250,8 @@ func (p *cephFSProvisioner) Provision(ctx context.Context, options controller.Pr
 		return nil, controller.ProvisioningFinished, err
 	}
 
-	if ! p.IsPlacedOnLocalNode(options.PVC) {
-		if ! p.CanBePlacedOnLocalNode(ctx, options.PVC) {
+	if !p.IsPlacedOnLocalNode(options.PVC) {
+		if !p.CanBePlacedOnLocalNode(ctx, options.PVC) {
 			return nil, controller.ProvisioningFinished, errors.New(fmt.Sprintf("PVC %s cannot be placed on %s.", options.PVC.Name, p.nodeName))
 		}
 		perr := p.PlaceOnLocalNode(ctx, options.PVC)

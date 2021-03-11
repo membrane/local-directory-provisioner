@@ -21,7 +21,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: spec.nodeName
-        image: predic8/local-directory-provisioner:27
+        image: predic8/local-directory-provisioner:40
         command:
         - /usr/local/bin/local-directory-provisioner
         - -v=4
