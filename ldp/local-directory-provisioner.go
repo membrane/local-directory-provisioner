@@ -158,8 +158,12 @@ func (p *cephFSProvisioner) CanBePlacedOnLocalNode(ctx context.Context, claim *v
 	for _, pvc := range pvcs.Items {
 		glog.Infof("Found PVC %s (claim: %s)", pvc.Name, claim.Name)
 		if pvc.Name == claim.Name {
+			if p.HasSameLabels(&pvc, claim) {
+				return false
+			}
 			continue
 		}
+
 		if requestedNodeName, found2 := pvc.Annotations[provisionerNodeKey]; found2 {
 			glog.Infof("Found hostname annotation 2: %s", requestedNodeName)
 			if requestedNodeName == p.nodeName {
