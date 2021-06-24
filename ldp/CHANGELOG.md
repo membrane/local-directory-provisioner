@@ -1,3 +1,6 @@
+# 41 (11.03.2021)
+- improved Dockerfile
+
 # 40 (11.03.2021)
 - fixed master election
 - fixed label comparision
