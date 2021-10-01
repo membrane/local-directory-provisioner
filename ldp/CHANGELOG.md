@@ -1,3 +1,6 @@
+# 44 (01.10.2021)
+- upgraded alpine base image to 3.14.2
+
 # 41 (11.03.2021)
 - improved Dockerfile
 
