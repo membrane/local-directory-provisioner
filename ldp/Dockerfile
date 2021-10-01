@@ -23,7 +23,7 @@ ADD . /go/src/github.com/membrane/local-directory-provisioner/ldp
 RUN go build -a -ldflags '-extldflags "-static"' -o /go/bin/local-directory-provisioner local-directory-provisioner.go
 
 
-FROM alpine:3.13
+FROM alpine:3.14.2
 
 COPY --from=build /go/bin/local-directory-provisioner /usr/local/bin/local-directory-provisioner
 CMD ["/usr/local/bin/local-directory-provisioner"]
