@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.15 AS build
+FROM golang:1.18 AS build
 
 ADD go.mod /go/src/github.com/membrane/local-directory-provisioner/ldp/
 ADD go.sum /go/src/github.com/membrane/local-directory-provisioner/ldp/
@@ -23,7 +23,7 @@ ADD . /go/src/github.com/membrane/local-directory-provisioner/ldp
 RUN go build -a -ldflags '-extldflags "-static"' -o /go/bin/local-directory-provisioner local-directory-provisioner.go
 
 
-FROM alpine:3.14.2
+FROM alpine:3.16.2
 
 COPY --from=build /go/bin/local-directory-provisioner /usr/local/bin/local-directory-provisioner
 CMD ["/usr/local/bin/local-directory-provisioner"]

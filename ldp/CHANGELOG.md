@@ -1,3 +1,6 @@
+# 45 (27.09.2022)
+- upgraded dependencies
+
 # 44 (01.10.2021)
 - upgraded alpine base image to 3.14.2
 

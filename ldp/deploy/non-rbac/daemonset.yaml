@@ -23,7 +23,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: spec.nodeName
-        image: hub.predic8.de/p8/local-directory-provisioner:0.0.1
+        image: predic8/local-directory-provisioner:45
         command:
         - /usr/local/bin/local-directory-provisioner
         - -v=4
